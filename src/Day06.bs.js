@@ -191,9 +191,78 @@ var Part1 = /* module */[
   /* maxArea */maxArea
 ];
 
-console.log("Part2 result: ", "TBD");
+var input$1 = Fs.readFileSync(inputPath, "utf8").split("\n");
 
-var Part2 = /* module */[];
+var points$1 = $$Array.map((function (str) {
+        var coords = $$Array.map(Caml_format.caml_int_of_string, str.split(", "));
+        return /* tuple */[
+                Caml_array.caml_array_get(coords, 0),
+                Caml_array.caml_array_get(coords, 1)
+              ];
+      }), input$1);
+
+var match$1 = $$Array.fold_left((function (param, param$1) {
+        var y = param$1[1];
+        var x = param$1[0];
+        return /* tuple */[
+                Caml_primitive.caml_int_min(param[0], x),
+                Caml_primitive.caml_int_max(param[1], x),
+                Caml_primitive.caml_int_min(param[2], y),
+                Caml_primitive.caml_int_max(param[3], y)
+              ];
+      }), /* tuple */[
+      Pervasives.max_int,
+      Pervasives.min_int,
+      Pervasives.max_int,
+      Pervasives.min_int
+    ], points$1);
+
+var maxY$1 = match$1[3];
+
+var minY$1 = match$1[2];
+
+var maxX$1 = match$1[1];
+
+var minX$1 = match$1[0];
+
+function dist$1(param, param$1) {
+  return Pervasives.abs(param[0] - param$1[0] | 0) + Pervasives.abs(param[1] - param$1[1] | 0) | 0;
+}
+
+var safeSpotCounter = /* record */[/* contents */0];
+
+for(var x$1 = minX$1; x$1 <= maxX$1; ++x$1){
+  (function(x$1){
+  for(var y$1 = minY$1; y$1 <= maxY$1; ++y$1){
+    var totalDistance = $$Array.fold_left((function(y$1){
+        return function (acc, p) {
+          return acc + dist$1(p, /* tuple */[
+                      x$1,
+                      y$1
+                    ]) | 0;
+        }
+        }(y$1)), 0, points$1);
+    if (totalDistance < 10000) {
+      safeSpotCounter[0] = safeSpotCounter[0] + 1 | 0;
+    }
+    
+  }
+  }(x$1));
+}
+
+console.log("Part2 result: ", safeSpotCounter[0]);
+
+var Part2 = /* module */[
+  /* input */input$1,
+  /* points */points$1,
+  /* minX */minX$1,
+  /* maxX */maxX$1,
+  /* minY */minY$1,
+  /* maxY */maxY$1,
+  /* dist */dist$1,
+  /* safeDistance */10000,
+  /* safeSpotCounter */safeSpotCounter
+];
 
 exports.inputPath = inputPath;
 exports.dummy_input = dummy_input;

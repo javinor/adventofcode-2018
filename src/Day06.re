@@ -3,7 +3,8 @@ let inputPath = "./src/" ++ Node.Path.parse(__FILE__)##name ++ ".input";
 let dummy_input = [|"1, 1", "1, 6", "8, 3", "3, 4", "5, 5", "8, 9"|];
 
 module Part1 = {
-  let input = inputPath |> Node.Fs.readFileAsUtf8Sync |> Js.String.split("\n");
+  let input =
+    inputPath |> Node.Fs.readFileAsUtf8Sync |> Js.String.split("\n");
   // let input = dummy_input;
 
   let points =
@@ -124,5 +125,40 @@ module Part1 = {
 };
 
 module Part2 = {
-  Js.log2("Part2 result: ", "TBD");
+  let input =
+    inputPath |> Node.Fs.readFileAsUtf8Sync |> Js.String.split("\n");
+  // let input = dummy_input;
+
+  let points =
+    input
+    |> Array.map(str => {
+         let coords =
+           str |> Js.String.split(", ") |> Array.map(int_of_string);
+         (coords[0], coords[1]);
+       });
+
+  let (minX, maxX, minY, maxY) =
+    points
+    |> Array.fold_left(
+         ((minX, maxX, minY, maxY), (x, y)) =>
+           (min(minX, x), max(maxX, x), min(minY, y), max(maxY, y)),
+         (max_int, min_int, max_int, min_int),
+       );
+
+  let dist = ((x, y), (x', y')) => abs(x - x') + abs(y - y');
+  let safeDistance = 10000;
+  let safeSpotCounter = ref(0);
+
+  for (x in minX to maxX) {
+    for (y in minY to maxY) {
+      let totalDistance =
+        points |> Array.fold_left((acc, p) => acc + dist(p, (x, y)), 0);
+
+      if (totalDistance < safeDistance) {
+        safeSpotCounter := safeSpotCounter^ + 1;
+      };
+    };
+  };
+
+  Js.log2("Part2 result: ", safeSpotCounter^);
 };
