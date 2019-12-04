@@ -10,6 +10,9 @@ var Js_option = require("bs-platform/lib/js/js_option.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Pervasives = require("bs-platform/lib/js/pervasives.js");
 var Caml_option = require("bs-platform/lib/js/caml_option.js");
+var Caml_string = require("bs-platform/lib/js/caml_string.js");
+var Belt_MapString = require("bs-platform/lib/js/belt_MapString.js");
+var Belt_SetString = require("bs-platform/lib/js/belt_SetString.js");
 var Belt_MutableSetString = require("bs-platform/lib/js/belt_MutableSetString.js");
 
 var inputPath = "./src/" + (Path.parse("Day07.re").name + ".input");
@@ -23,8 +26,6 @@ var dummy_input = /* array */[
   "Step D must be finished before step E can begin.",
   "Step F must be finished before step E can begin."
 ];
-
-var input = Fs.readFileSync(inputPath, "utf8").split("\n");
 
 function parseEdge(line) {
   var re = (/Step ([A-Z]) must be finished before step ([A-Z]) can begin./);
@@ -40,6 +41,8 @@ function parseEdge(line) {
           ];
   }
 }
+
+var input = Fs.readFileSync(inputPath, "utf8").split("\n");
 
 var edges = $$Array.map(parseEdge, input);
 
@@ -91,18 +94,154 @@ console.log("Part1 result: ", result);
 
 var Part1 = /* module */[
   /* input */input,
-  /* parseEdge */parseEdge,
   /* edges */edges,
   /* topologicalSort */topologicalSort,
   /* result */result
 ];
 
-console.log("Part2 result: ", "TBD");
+var input$1 = Fs.readFileSync(inputPath, "utf8").split("\n");
 
-var Part2 = /* module */[/* input */dummy_input];
+var edges$1 = $$Array.map(parseEdge, input$1);
+
+var vertices = Belt_SetString.union(Belt_SetString.fromArray($$Array.map((function (prim) {
+                return prim[0];
+              }), edges$1)), Belt_SetString.fromArray($$Array.map((function (prim) {
+                return prim[1];
+              }), edges$1)));
+
+var tasksBlockedBy = $$Array.fold_left((function (acc, param) {
+        var blockedTasks = param[1];
+        return Belt_MapString.update(acc, param[0], (function (arr) {
+                      if (arr !== undefined) {
+                        return $$Array.append(blockedTasks, arr);
+                      } else {
+                        return blockedTasks;
+                      }
+                    }));
+      }), Belt_MapString.fromArray($$Array.map((function (task) {
+                return /* tuple */[
+                        task,
+                        /* array */[]
+                      ];
+              }), Belt_SetString.toArray(vertices))), $$Array.map((function (param) {
+            return /* tuple */[
+                    param[0],
+                    /* array */[param[1]]
+                  ];
+          }), edges$1));
+
+function runScheduler(nWorkers, tasksBlockedBy) {
+  var getFreeWorker = function (workers) {
+    var i = workers.findIndex(Js_option.isNone);
+    if (i !== -1) {
+      return i;
+    }
+    
+  };
+  var getAssignableTask = function (workers, tasksBlockedBy) {
+    var tasks = Belt_SetString.fromArray(Belt_MapString.keysToArray(tasksBlockedBy));
+    var blockedTasks = $$Array.fold_left((function (acc, values) {
+            return Belt_SetString.union(acc, Belt_SetString.fromArray(values));
+          }), Belt_SetString.empty, Belt_MapString.valuesToArray(tasksBlockedBy));
+    var wipTasks = Belt_SetString.fromArray($$Array.map((function (worker) {
+                return Js_option.getExn(worker)[0];
+              }), workers.filter(Js_option.isSome)));
+    var unblockedTasks = Belt_SetString.diff(tasks, blockedTasks);
+    return Belt_SetString.minimum(Belt_SetString.diff(unblockedTasks, wipTasks));
+  };
+  var _workers = Caml_array.caml_make_vect(nWorkers, undefined);
+  var _tasksBlockedBy = tasksBlockedBy;
+  var _time = 0;
+  while(true) {
+    var time = _time;
+    var tasksBlockedBy$1 = _tasksBlockedBy;
+    var workers = _workers;
+    var finishedTasks = $$Array.of_list($$Array.fold_left((function(time){
+            return function (acc, w) {
+              if (w !== undefined) {
+                var match = w;
+                var match$1 = match[1] > time;
+                if (match$1) {
+                  return acc;
+                } else {
+                  return /* :: */[
+                          match[0],
+                          acc
+                        ];
+                }
+              } else {
+                return acc;
+              }
+            }
+            }(time)), /* [] */0, workers));
+    var tasksBlockedBy$prime = Belt_MapString.removeMany(tasksBlockedBy$1, finishedTasks);
+    var workers$prime = $$Array.map((function(time){
+        return function (w) {
+          if (w !== undefined) {
+            var match = w;
+            var ttl = match[1];
+            var match$1 = ttl > time;
+            if (match$1) {
+              return /* tuple */[
+                      match[0],
+                      ttl
+                    ];
+            } else {
+              return undefined;
+            }
+          }
+          
+        }
+        }(time)), workers);
+    var finished = Belt_MapString.isEmpty(tasksBlockedBy$prime) && workers$prime.every(Js_option.isNone);
+    var match = getFreeWorker(workers$prime);
+    var match$1 = getAssignableTask(workers$prime, tasksBlockedBy$prime);
+    if (finished) {
+      return time;
+    } else if (match !== undefined) {
+      if (match$1 !== undefined) {
+        var task = match$1;
+        var ttl = (Caml_string.get(task, 0) - 64 | 0) + 60 | 0;
+        Caml_array.caml_array_set(workers$prime, match, /* tuple */[
+              task,
+              ttl + time | 0
+            ]);
+        _tasksBlockedBy = tasksBlockedBy$prime;
+        _workers = workers$prime;
+        continue ;
+      } else {
+        _time = time + 1 | 0;
+        _tasksBlockedBy = tasksBlockedBy$prime;
+        _workers = workers$prime;
+        continue ;
+      }
+    } else {
+      _time = time + 1 | 0;
+      _tasksBlockedBy = tasksBlockedBy$prime;
+      _workers = workers$prime;
+      continue ;
+    }
+  };
+}
+
+var result$1 = runScheduler(5, tasksBlockedBy);
+
+console.log("Part2 result: ", result$1);
+
+var Part2 = /* module */[
+  /* input */input$1,
+  /* nWorkers */5,
+  /* stepDurationBase */60,
+  /* edges */edges$1,
+  /* vertices */vertices,
+  /* tasksBlockedBy */tasksBlockedBy,
+  /* runScheduler */runScheduler,
+  /* result */result$1
+];
 
 exports.inputPath = inputPath;
 exports.dummy_input = dummy_input;
+exports.parseEdge = parseEdge;
 exports.Part1 = Part1;
 exports.Part2 = Part2;
 /* inputPath Not a pure module */
