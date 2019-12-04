@@ -20,6 +20,7 @@ let parseTree = numbers => {
         children := [node, ...children^];
         numbers' := remainingNumbers;
       };
+      children := List.rev(children^);
 
       let (data, remainingNumbers) =
         Belt.List.splitAt(numbers'^, nData) |> Belt.Option.getExn;
@@ -45,13 +46,39 @@ module Part1 = {
     |> Array.map(int_of_string)
     |> Array.to_list;
 
-  let tree = parseTree(numbers);
+  let result = numbers |> parseTree |> sumTree;
 
-  Js.log2("Part1 result: ", sumTree(tree));
+  Js.log2("Part1 result: ", result);
 };
 
 module Part2 = {
-  // let input = dummy_input;
+  let rec complexSumTree = (Node(children, data)) => {
+    let children = Array.of_list(children);
 
-  Js.log2("Part2 result: ", "TBD");
+    if (Array.length(children) == 0) {
+      data |> List.fold_left((+), 0);
+    } else {
+      let values = children |> Array.map(complexSumTree);
+      data
+      |> List.fold_left(
+           (acc, datum) => {
+             let index = datum - 1;
+             let value =
+               0 <= index && index < Array.length(values) ? values[index] : 0;
+             acc + value;
+           },
+           0,
+         );
+    };
+  };
+
+  let numbers =
+    input
+    |> Js.String.split(" ")
+    |> Array.map(int_of_string)
+    |> Array.to_list;
+
+  let result = numbers |> parseTree |> complexSumTree;
+
+  Js.log2("Part2 result: ", result);
 };

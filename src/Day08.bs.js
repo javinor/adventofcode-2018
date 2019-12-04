@@ -6,6 +6,7 @@ var List = require("bs-platform/lib/js/list.js");
 var Path = require("path");
 var $$Array = require("bs-platform/lib/js/array.js");
 var Belt_List = require("bs-platform/lib/js/belt_List.js");
+var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Pervasives = require("bs-platform/lib/js/pervasives.js");
 var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
 var Caml_format = require("bs-platform/lib/js/caml_format.js");
@@ -29,6 +30,7 @@ function parseTree(numbers) {
           ];
           numbers$prime = match$1[1];
         }
+        children = List.rev(children);
         var match$2 = Belt_Option.getExn(Belt_List.splitAt(numbers$prime, match[0]));
         return /* tuple */[
                 /* Node */[
@@ -59,19 +61,45 @@ function sumTree(param) {
 
 var numbers = $$Array.to_list($$Array.map(Caml_format.caml_int_of_string, input.split(" ")));
 
-var tree = parseTree(numbers);
+var result = sumTree(parseTree(numbers));
 
-console.log("Part1 result: ", sumTree(tree));
+console.log("Part1 result: ", result);
 
 var Part1 = /* module */[
   /* sumTree */sumTree,
   /* numbers */numbers,
-  /* tree */tree
+  /* result */result
 ];
 
-console.log("Part2 result: ", "TBD");
+function complexSumTree(param) {
+  var data = param[1];
+  var children = $$Array.of_list(param[0]);
+  if (children.length === 0) {
+    return List.fold_left((function (prim, prim$1) {
+                  return prim + prim$1 | 0;
+                }), 0, data);
+  } else {
+    var values = $$Array.map(complexSumTree, children);
+    return List.fold_left((function (acc, datum) {
+                  var index = datum - 1 | 0;
+                  var match = 0 <= index && index < values.length;
+                  var value = match ? Caml_array.caml_array_get(values, index) : 0;
+                  return acc + value | 0;
+                }), 0, data);
+  }
+}
 
-var Part2 = /* module */[];
+var numbers$1 = $$Array.to_list($$Array.map(Caml_format.caml_int_of_string, input.split(" ")));
+
+var result$1 = complexSumTree(parseTree(numbers$1));
+
+console.log("Part2 result: ", result$1);
+
+var Part2 = /* module */[
+  /* complexSumTree */complexSumTree,
+  /* numbers */numbers$1,
+  /* result */result$1
+];
 
 var dummy_input = "2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2";
 
