@@ -3,55 +3,98 @@
 
 var $$Array = require("bs-platform/lib/js/array.js");
 var Caml_obj = require("bs-platform/lib/js/caml_obj.js");
+var Js_option = require("bs-platform/lib/js/js_option.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Caml_int32 = require("bs-platform/lib/js/caml_int32.js");
 
+function singleton(value) {
+  var el = /* record */[
+    /* value */value,
+    /* next */undefined,
+    /* prev */undefined
+  ];
+  el[/* next */1] = el;
+  el[/* prev */2] = el;
+  return el;
+}
+
+function insertAfter(value, el) {
+  var newEl = /* record */[
+    /* value */value,
+    /* next */el[/* next */1],
+    /* prev */el
+  ];
+  var match = el[/* next */1];
+  if (match !== undefined) {
+    match[/* prev */2] = newEl;
+  }
+  el[/* next */1] = newEl;
+  return newEl;
+}
+
+function remove(el) {
+  var next = el[/* next */1];
+  var prev = el[/* prev */2];
+  if (prev !== undefined) {
+    prev[/* next */1] = next;
+  }
+  if (next !== undefined) {
+    next[/* prev */2] = prev;
+  }
+  el[/* prev */2] = undefined;
+  el[/* next */1] = undefined;
+  return /* () */0;
+}
+
+function prevN(_el, _n) {
+  while(true) {
+    var n = _n;
+    var el = _el;
+    var match = n === 0;
+    if (match) {
+      return el;
+    } else {
+      _n = n - 1 | 0;
+      _el = Js_option.getExn(el[/* prev */2]);
+      continue ;
+    }
+  };
+}
+
+var CyclicDLList = /* module */[
+  /* singleton */singleton,
+  /* insertAfter */insertAfter,
+  /* remove */remove,
+  /* prevN */prevN
+];
+
 function play(nPlayers, lastMarble) {
   var scores = Caml_array.caml_make_vect(nPlayers, 0);
-  var _marbles = /* array */[0];
-  var _marbleIndex = 0;
-  var _playerIndex = 0;
-  var _nextNumber = 1;
+  var _currentMarble = singleton(0);
+  var _currentPlayer = 0;
+  var _nextMarbleValue = 1;
   while(true) {
-    var nextNumber = _nextNumber;
-    var playerIndex = _playerIndex;
-    var marbleIndex = _marbleIndex;
-    var marbles = _marbles;
-    var nextPlayerIndex = Caml_int32.mod_(playerIndex + 1 | 0, nPlayers);
-    if (nextNumber > lastMarble) {
+    var nextMarbleValue = _nextMarbleValue;
+    var currentPlayer = _currentPlayer;
+    var currentMarble = _currentMarble;
+    var nextPlayer = Caml_int32.mod_(currentPlayer + 1 | 0, nPlayers);
+    if (nextMarbleValue > lastMarble) {
       return $$Array.fold_left(Caml_obj.caml_max, 0, scores);
-    } else if (nextNumber % 23 === 0) {
-      var indexToRemove = Caml_int32.mod_((marbleIndex - 7 | 0) + marbles.length | 0, marbles.length);
-      Caml_array.caml_array_set(scores, playerIndex, (Caml_array.caml_array_get(scores, playerIndex) + nextNumber | 0) + Caml_array.caml_array_get(marbles, indexToRemove) | 0);
-      var marbles$prime = $$Array.concat(/* :: */[
-            marbles.slice(0, indexToRemove),
-            /* :: */[
-              marbles.slice(indexToRemove + 1 | 0),
-              /* [] */0
-            ]
-          ]);
-      var marbleIndex$prime = Caml_int32.mod_(indexToRemove, marbles$prime.length);
-      _nextNumber = nextNumber + 1 | 0;
-      _playerIndex = nextPlayerIndex;
-      _marbleIndex = marbleIndex$prime;
-      _marbles = marbles$prime;
+    } else if (nextMarbleValue % 23 === 0) {
+      var marbleToRemove = prevN(currentMarble, 7);
+      var nextCurrentMarble = Js_option.getExn(marbleToRemove[/* next */1]);
+      Caml_array.caml_array_set(scores, currentPlayer, Caml_array.caml_array_get(scores, currentPlayer) + (nextMarbleValue + marbleToRemove[/* value */0] | 0));
+      remove(marbleToRemove);
+      _nextMarbleValue = nextMarbleValue + 1 | 0;
+      _currentPlayer = nextPlayer;
+      _currentMarble = nextCurrentMarble;
       continue ;
     } else {
-      var marbleIndex$prime$1 = Caml_int32.mod_(marbleIndex + 1 | 0, marbles.length) + 1 | 0;
-      var marbles$prime$1 = $$Array.concat(/* :: */[
-            marbles.slice(0, marbleIndex$prime$1),
-            /* :: */[
-              /* array */[nextNumber],
-              /* :: */[
-                marbles.slice(marbleIndex$prime$1),
-                /* [] */0
-              ]
-            ]
-          ]);
-      _nextNumber = nextNumber + 1 | 0;
-      _playerIndex = nextPlayerIndex;
-      _marbleIndex = marbleIndex$prime$1;
-      _marbles = marbles$prime$1;
+      var tempMarble = Js_option.getExn(currentMarble[/* next */1]);
+      var nextCurrentMarble$1 = insertAfter(nextMarbleValue, tempMarble);
+      _nextMarbleValue = nextMarbleValue + 1 | 0;
+      _currentPlayer = nextPlayer;
+      _currentMarble = nextCurrentMarble$1;
       continue ;
     }
   };
@@ -61,13 +104,16 @@ var result = play(424, 71482);
 
 console.log("Part1 result: ", result);
 
-var Part1 = /* module */[
-  /* play */play,
-  /* result */result
-];
+var Part1 = /* module */[/* result */result];
 
-var Part2 = /* module */[];
+var result$1 = play(424, 7148200);
 
+console.log("Part2 result: ", result$1);
+
+var Part2 = /* module */[/* result */result$1];
+
+exports.CyclicDLList = CyclicDLList;
+exports.play = play;
 exports.Part1 = Part1;
 exports.Part2 = Part2;
 /* result Not a pure module */
